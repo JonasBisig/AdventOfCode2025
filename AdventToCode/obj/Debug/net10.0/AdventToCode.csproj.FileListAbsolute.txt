@@ -1,0 +1,15 @@
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\bin\Debug\net10.0\AdventToCode.exe
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\bin\Debug\net10.0\AdventToCode.deps.json
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\bin\Debug\net10.0\AdventToCode.runtimeconfig.json
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\bin\Debug\net10.0\AdventToCode.dll
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\bin\Debug\net10.0\AdventToCode.pdb
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.AssemblyInfoInputs.cache
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.AssemblyInfo.cs
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.csproj.CoreCompileInputs.cache
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.sourcelink.json
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.dll
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\refint\AdventToCode.dll
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.pdb
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\AdventToCode.genruntimeconfig.cache
+C:\Users\jonas\source\repos\JonasBisig\AdventToCode\AdventToCode\obj\Debug\net10.0\ref\AdventToCode.dll
