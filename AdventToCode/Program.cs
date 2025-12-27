@@ -15,7 +15,7 @@ namespace AdventToCode
 
             //to use the example string enable this line and comment the line below
             //string[] ranges = example.Split(",");
-            string[] ranges = File.ReadAllText("C:\\Users\\jonas\\source\\repos\\JonasBisig\\AdventToCode\\AdventToCode\\bin\\input.txt").Split(",");
+            string[] ranges = File.ReadAllText(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt")).Split(",");
             long result = 0;
 
             //go through each range
