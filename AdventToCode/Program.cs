@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace AdventToCode
 {
@@ -10,26 +12,26 @@ namespace AdventToCode
     {
         static void Main(string[] args)
         {
-            //example string
+            //example string for visualization
             string example = """
                 .......S....... 1  .......S.......
-                ............... 1  .......|.......
-                .......^....... 2  ......|^|......
-                ............... 2  ......|.|......
-                ......^.^...... 4  .....|^|^|.....
-                ............... 4  .....|.|.|.....
-                .....^.^.^..... 8  ....|^|^|^|....
-                ............... 8  ....|.|.|.|....
-                ....^.^...^.... 13 ...|^|^|||^|...
-                ............... 13 ...|.|.|||.|...
-                ...^.^...^.^... 20 ..|^|^|||^|^|..
-                ............... 20 ..|.|.|||.|.|..
-                ..^...^.....^.. 26 .|^|||^||.||^|.
-                ............... 26 .|.|||.||.||.|.
-                .^.^.^.^.^...^. 40 |^|^|^|^|^|||^|
-                ............... 40 |.|.|.|.|.|||.|               
+                ............... 1  .......1.......
+                .......^....... 2  ......1^1......
+                ............... 2  ......1.1......
+                ......^.^...... 4  .....1^2^1.....
+                ............... 4  .....1.2.1.....
+                .....^.^.^..... 8  ....1^3^3^1....
+                ............... 8  ....1.3.3.1....
+                ....^.^...^.... 13 ...1^4^331^1...
+                ............... 13 ...1.4.331.1...
+                ...^.^...^.^... 20 ..1^5^434^2^1..
+                ............... 20 ..1.5.434.2.1..
+                ..^...^.....^.. 26 .1^154^74.21^1.
+                ............... 26 .1.154.74.21.1.
+                .^.^.^.^.^...^. 40 .^.^.^.^.^...^.
+                ............... 40 1 + 2 + 10 + 11 + 11 + 2 + 1 + 1 + 1 = 40                                   
                 """;
-
+            //example string
             example = """
                 .......S.......
                 ...............
@@ -50,77 +52,44 @@ namespace AdventToCode
                 """;
 
             //to use the example string enable this line and comment the line below
-            IEnumerable<string> array = example.Split("\r\n");
-            //IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
+            //IEnumerable<string> array = example.Split("\r\n");
+            IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
 
-            List<List<List<char>>> timelines = new List<List<List<char>>>();
-            timelines.Add(array.Select(line => line.ToList()).ToList());
-            long result = 0;
+            //replace all . with 0, the start S with 1 and all ^ with -1 to create the diagramm out of integers
+            List<List<long>> diagramm = array.Select(line => line.Replace('^', '2').Replace("S", "1").Replace(".", "0").ToList()).Select(line => line.Select(c => (long)char.GetNumericValue(c) is 2 ? -1 : (long)char.GetNumericValue(c)).ToList()).ToList();
 
-            int row = 0;
-
-            while (timelines.Count != 0)
+            for (int row = 0; row < diagramm.Count - 1; row++)
             {
-                Console.CursorLeft = 0;
-                Console.Write($"Fortschritt: {timelines.Count}");
-                int length = timelines.Count;
-                for (int diags = 0; diags < length; diags++)
+                for (int col = 0; col < diagramm[row].Count; col++)
                 {
+                    //get the current number and the number below it
+                    long currentNum = diagramm[row][col];
+                    long nextNum = diagramm[row + 1][col];
 
-                    List<List<char>> diagramm = timelines[0];
-
-                    if (row + 1 >= diagramm.Count)
+                    //if the current number is not a ^(-1) and not a .(0), then check if the long below is a splitter if it is split in two, else go straight down
+                    if (currentNum is > 0)
                     {
-                        result = timelines.Count;
-                        timelines.RemoveRange(0, timelines.Count);
-                        break;
-                    }
-
-                    for (int col = 0; col < diagramm[row].Count; col++)
-                    {
-                        //get the current char and the char below it
-                        char currentChar = diagramm[row][col];
-                        char nextChar = diagramm[row + 1][col];
-
-                        //if the current char is the start S or the Beam, then check if the beam has to split or not
-                        if (currentChar is 'S' or '|')
+                        if (nextNum is -1)
                         {
-                            if (nextChar is '|' || (nextChar == '^' && (diagramm[row + 1][col + 1] == '|' || diagramm[row + 1][col - 1] == '|')))
-                            {
-                                timelines.RemoveAt(0);
-                                continue;
-                            }
-
-                            if (nextChar is '^')
-                            {
-                                List<List<char>> leftDiagramm = diagramm.Select(row => row.ToList()).ToList();
-                                List<List<char>> rightDiagramm = diagramm.Select(row => row.ToList()).ToList();
-                                rightDiagramm[row + 1][col + 1] = '|';
-                                leftDiagramm[row + 1][col - 1] = '|';
-                                timelines.Add(leftDiagramm);
-                                timelines.Add(rightDiagramm);
-                                timelines.RemoveAt(0);
-
-                                //breaks outer loop
-                                //row = diagramm.Count;
-                                break;
-                            }
-                            else
-                            {
-                                diagramm[row + 1][col] = '|';
-                                timelines.Add(diagramm);
-                                timelines.RemoveAt(0);
-
-                                //breaks outer loop
-                                //row = diagramm.Count;
-                                break;
-                            }
+                            diagramm[row + 1][col + 1] += currentNum;
+                            diagramm[row + 1][col - 1] += currentNum;
+                        }
+                        else
+                        {
+                            diagramm[row + 1][col] += currentNum;
                         }
                     }
                 }
-                row++;
             }
-            Console.WriteLine("\nThe beam has split "+ result + " times!");
+
+            //the result is the sum of all the numbers in the last row
+            long result = 0;
+            foreach (long number in diagramm[diagramm.Count - 1])
+            {
+                result += number;
+            }
+
+            Console.WriteLine("One single beam has " + result + " different timelines!");
         }
     }
 }
