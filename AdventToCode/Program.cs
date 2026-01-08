@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -9,6 +12,23 @@ namespace AdventToCode
     {
         static void Main(string[] args)
         {
+            //only to visualize a progress spinner
+            List<string> progress = new List<string>(["/", "-", "\\", "|"]);
+            int progressIndex = 0;
+            
+            var progressUpdate = new System.Timers.Timer(100);
+            progressUpdate.AutoReset = true;
+            progressUpdate.Elapsed += (sender, e) => {
+                Console.CursorLeft = 0;
+                Console.Write(progress[progressIndex % 4]);
+                progressIndex++;
+            };
+            progressUpdate.Start();
+
+            //only to measure time elapsed
+            var timer = Stopwatch.StartNew();
+            timer.Start();
+
             //example string
             string example = """
                 162,817,812
@@ -34,8 +54,90 @@ namespace AdventToCode
                 """;
 
             //to use the example string enable this line and comment the line below
-            IEnumerable<string> array = example.Split("\r\n");
-            //IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
+            //IEnumerable<string> array = example.Split("\r\n"); int connectionCount = 10;
+            IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt")); int connectionCount = 1000;
+
+            List<List<int>> dimensions = array.Select(line => line.Split(",").Select(num => int.Parse(num)).ToList()).ToList();
+
+            List<string> connections = new List<string>();
+            List<List<int>> cirquits = new List<List<int>>();
+
+            //to for ether 10 shortest connection or 1000 shortest connections -> example or real input
+            for (int z = 0; z < connectionCount; z++)
+            {
+                double minDistance = double.MaxValue;
+                int index1 = -1, index2 = -1;
+
+                //go through all points and find the closest two points that are not yet connected
+                for (int i = 0; i < dimensions.Count; i++)
+                {
+                    for (int x = 1; x < dimensions.Count; x++)
+                    {
+                        //if the points are the same -> skip
+                        if (i == x) continue;
+
+                        //do the calculation with the formula from the task (Euclidean distance)
+                        double dx = dimensions[i][0] - dimensions[x][0];
+                        double dy = dimensions[i][1] - dimensions[x][1];
+                        double dz = dimensions[i][2] - dimensions[x][2];
+                        double distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+
+                        //determine if this is the shortest distance found so far and if these points are not yet connected (contained in connections)
+                        if (distance < minDistance)
+                        {
+                            if(!connections.Contains(string.Join(",", i, x)) && !connections.Contains(string.Join(",", x, i)))
+                            {
+                                minDistance = distance;
+                                index1 = i;
+                                index2 = x;
+                            }
+                        }
+                    }
+                }
+
+                //add the connection and get the index of each point in the cirquits list
+                if (index1 is not -1 && index2 is not -1 && minDistance is not double.MaxValue)
+                {
+                    connections.Add(string.Join(",", index1, index2));
+                    int i1 = cirquits.FindIndex(x => x.Contains(index1));
+                    int i2 = cirquits.FindIndex(x => x.Contains(index2));
+
+                    //if both points were found in different cirquits -> merge them
+                    if (i1 != -1 && i2 != -1 && i1 != i2)
+                    {
+                        //Merge cirquits
+                        cirquits[i1] = cirquits[i1].Union(cirquits[i2]).ToList();
+                        cirquits.RemoveAt(i2);
+                    }
+                    //if only one point was found -> add the other point to that cirquit but only if not already contained
+                    else if (i1 != -1)
+                    {
+                        if(!cirquits[i1].Contains(index2)) cirquits[i1].Add(index2);
+                    }
+                    //if only one point was found -> add the other point to that cirquit but only if not already contained
+                    else if (i2 != -1)
+                    {
+                        if (!cirquits[i2].Contains(index1)) cirquits[i2].Add(index1);
+                    }
+                    //if no index is found -> create a new cirquit with both points
+                    else
+                    {
+                        cirquits.Add(new List<int>([index1, index2]));
+                    }
+                }
+            }
+
+            //order cirquits by cirquit size descending -> 5,4,3,2,1
+            cirquits = cirquits.OrderByDescending(list => list.Count).ToList();
+
+            //multiply the sizes of the three largest cirquits
+            long result = cirquits[0].Count * cirquits[1].Count * cirquits[2].Count;
+
+            //only for measuring time elapsed
+            timer.Stop();
+            float timeElapsed = (float)timer.ElapsedMilliseconds / 1000 < 0.9 ? timer.ElapsedMilliseconds : (float)timer.ElapsedMilliseconds / 1000;
+            string unit = (float)timer.ElapsedMilliseconds / 1000 < 0.9 ? "milliseconds" : "seconds";
+            Console.WriteLine($"The size of the three largest circuits multiplied is {result}!\nThe program took {timeElapsed} {unit} to process the input!");
         }
     }
 }
