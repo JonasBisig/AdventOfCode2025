@@ -14,11 +14,15 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
               "$type": "Document",
@@ -26,9 +30,9 @@
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\admin\\source\\repos\\AdventToCode2025\\AdventToCode\\Program.cs",
               "RelativeDocumentMoniker": "AdventToCode\\Program.cs",
-              "ToolTip": "C:\\Users\\admin\\source\\repos\\AdventToCode2025\\AdventToCode\\Program.cs",
-              "RelativeToolTip": "AdventToCode\\Program.cs",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAQwBAAAAAMAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\admin\\source\\repos\\AdventToCode2025\\AdventToCode\\Program.cs*",
+              "RelativeToolTip": "AdventToCode\\Program.cs*",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAACaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-07T10:00:32.078Z",
               "EditorCaption": ""
