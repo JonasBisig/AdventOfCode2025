@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -54,90 +55,52 @@ namespace AdventToCode
                 """;
 
             //to use the example string enable this line and comment the line below
-            //IEnumerable<string> array = example.Split("\r\n"); int connectionCount = 10;
-            IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt")); int connectionCount = 1000;
+            //IEnumerable<string> array = example.Split("\r\n");
+            IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
 
             List<List<int>> dimensions = array.Select(line => line.Split(",").Select(num => int.Parse(num)).ToList()).ToList();
 
-            List<string> connections = new List<string>();
-            List<List<int>> cirquits = new List<List<int>>();
+            //create all possible distinct combinations of points
+            List<List<List<int>>> connections = dimensions.SelectMany((a, i) => dimensions.Skip(i + 1).Select(b => new List<List<int>>([a.ToList(), b.ToList()]))).OrderBy(pair => Math.Sqrt(Math.Pow(pair[0][0] - pair[1][0], 2) + Math.Pow(pair[0][1] - pair[1][1], 2) + Math.Pow(pair[0][2] - pair[1][2], 2))).ToList();
 
-            //to for ether 10 shortest connection or 1000 shortest connections -> example or real input
-            for (int z = 0; z < connectionCount; z++)
+            //create one circuit for each point in dimensions
+            Dictionary<int, List<List<int>>> circuits = dimensions.Select((pos, i) => new { i, pos }).ToDictionary(x => x.i, x => new List<List<int>>([x.pos]));
+
+            //do it for each connection but only until all connections are in the same circuit
+            int result = 0;
+            for (int i = 0; i < connections.Count; i++)
             {
-                double minDistance = double.MaxValue;
-                int index1 = -1, index2 = -1;
+                //get the next connection
+                List<List<int>> connection = connections[i];
 
-                //go through all points and find the closest two points that are not yet connected
-                for (int i = 0; i < dimensions.Count; i++)
+                //determine the circuit key from the first point
+                int circuitsId1 = circuits.First(kvp => kvp.Value.Any(inner => inner.SequenceEqual(connection[0]))).Key;
+
+                //determine the circuit key from the second point
+                int circuitsId2 = circuits.First(kvp => kvp.Value.Any(inner => inner.SequenceEqual(connection[1]))).Key;
+
+                //if the keys are the same, the points are already connected in the circuit, if not then merge the circuits and remove one
+                if (circuitsId1 != circuitsId2)
                 {
-                    for (int x = 1; x < dimensions.Count; x++)
-                    {
-                        //if the points are the same -> skip
-                        if (i == x) continue;
-
-                        //do the calculation with the formula from the task (Euclidean distance)
-                        double dx = dimensions[i][0] - dimensions[x][0];
-                        double dy = dimensions[i][1] - dimensions[x][1];
-                        double dz = dimensions[i][2] - dimensions[x][2];
-                        double distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
-
-                        //determine if this is the shortest distance found so far and if these points are not yet connected (contained in connections)
-                        if (distance < minDistance)
-                        {
-                            if(!connections.Contains(string.Join(",", i, x)) && !connections.Contains(string.Join(",", x, i)))
-                            {
-                                minDistance = distance;
-                                index1 = i;
-                                index2 = x;
-                            }
-                        }
-                    }
+                    circuits[circuitsId1].AddRange(circuits[circuitsId2]);
+                    circuits.Remove(circuitsId2);
                 }
 
-                //add the connection and get the index of each point in the cirquits list
-                if (index1 is not -1 && index2 is not -1 && minDistance is not double.MaxValue)
+                //get from the last connection the first and the second point and from those points the X value and multiply it
+                if (circuits.Count == 1)
                 {
-                    connections.Add(string.Join(",", index1, index2));
-                    int i1 = cirquits.FindIndex(x => x.Contains(index1));
-                    int i2 = cirquits.FindIndex(x => x.Contains(index2));
-
-                    //if both points were found in different cirquits -> merge them
-                    if (i1 != -1 && i2 != -1 && i1 != i2)
-                    {
-                        //Merge cirquits
-                        cirquits[i1] = cirquits[i1].Union(cirquits[i2]).ToList();
-                        cirquits.RemoveAt(i2);
-                    }
-                    //if only one point was found -> add the other point to that cirquit but only if not already contained
-                    else if (i1 != -1)
-                    {
-                        if(!cirquits[i1].Contains(index2)) cirquits[i1].Add(index2);
-                    }
-                    //if only one point was found -> add the other point to that cirquit but only if not already contained
-                    else if (i2 != -1)
-                    {
-                        if (!cirquits[i2].Contains(index1)) cirquits[i2].Add(index1);
-                    }
-                    //if no index is found -> create a new cirquit with both points
-                    else
-                    {
-                        cirquits.Add(new List<int>([index1, index2]));
-                    }
+                    result = connection[0][0] * connection[1][0];
+                    break;
                 }
             }
-
-            //order cirquits by cirquit size descending -> 5,4,3,2,1
-            cirquits = cirquits.OrderByDescending(list => list.Count).ToList();
-
-            //multiply the sizes of the three largest cirquits
-            long result = cirquits[0].Count * cirquits[1].Count * cirquits[2].Count;
 
             //only for measuring time elapsed
             timer.Stop();
             float timeElapsed = (float)timer.ElapsedMilliseconds / 1000 < 0.9 ? timer.ElapsedMilliseconds : (float)timer.ElapsedMilliseconds / 1000;
             string unit = (float)timer.ElapsedMilliseconds / 1000 < 0.9 ? "milliseconds" : "seconds";
-            Console.WriteLine($"The size of the three largest circuits multiplied is {result}!\nThe program took {timeElapsed} {unit} to process the input!");
+
+            Console.CursorLeft = 0;
+            Console.WriteLine($"The multiplied X coordinates from the last connection is {result}!\nThe program took {timeElapsed} {unit} to process the input!");
         }
     }
 }
