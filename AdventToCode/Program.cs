@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -29,34 +31,43 @@ namespace AdventToCode
             //IEnumerable<string> array = example.Split("\r\n");
             IEnumerable<string> array = File.ReadAllLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
 
-            //save the polygon points
-            List<(double X, double Y)> polygon = array.Select(a => (X: double.Parse(a.Split(",")[0]), Y: double.Parse(a.Split(",")[1]))).ToList();
+            List<(long X, long Y)> polygon = array.Select(a => (X: long.Parse(a.Split(",")[0]), Y: long.Parse(a.Split(",")[1]))).ToList();
 
-            List<(double X, double Y)> debug = polygon.OrderBy(p => p.X).ThenBy(p => p.Y).ToList();
+            var stopwatch = Stopwatch.StartNew();
 
-            //get every combination of positions and order them by areasize descending -> largest area at pos 0
-            List<Tuple<(double X, double Y), (double X, double Y)>> areaPoints = array.SelectMany((a, i) => array.Skip(i + 1).Select(b => ((double.Parse(a.Split(",")[0]), double.Parse(a.Split(",")[1])), (double.Parse(b.Split(",")[0]), double.Parse(b.Split(",")[1]))).ToTuple()))
-                .OrderByDescending(x => (Math.Abs(x.Item1.Item1 - x.Item2.Item1) + 1) * (Math.Abs(x.Item1.Item2 - x.Item2.Item2) + 1))
-                .ToList();
+            long p1 = 0, p2 = 0;
 
-            Tuple<(double X, double Y), (double X, double Y)> largestValidPoints = new Tuple<(double X, double Y), (double X, double Y)>((0, 0), (0, 0));
+            List<((long X, long Y) a, (long X, long Y) b)> combinations = polygon.SelectMany((a, i) => polygon.Skip(i + 1).Select(b => (a, b))).ToList();
 
-            for (int i = 0; i < areaPoints.Count; i++)
+            long debug = 0;
+
+            foreach (var comb in combinations)
             {
-                (double X, double Y) invertedPointA = (areaPoints[i].Item2.X, areaPoints[i].Item1.Y);
-                (double X, double Y) invertedPointB = (areaPoints[i].Item1.X, areaPoints[i].Item2.Y);
+                Console.CursorLeft = 0;
+                Console.Write($"{debug}/{combinations.Count}                                               ");
+                debug++;
+                long f = Flaeche(comb.a.X, comb.a.Y, comb.b.X, comb.b.Y);
+                if (f < p2) continue;
 
-                largestValidPoints = areaPoints[i];
+                bool isInPolygon = false;
 
-                if (IsPointInPolygon(polygon, invertedPointA) && IsPointInPolygon(polygon, invertedPointB)) break;
+                for (long i = Math.Min(comb.a.X, comb.b.X); i <= Math.Max(comb.a.X, comb.b.X); i++)
+                {
+                    for (long j = Math.Min(comb.a.Y, comb.b.Y); j <= Math.Max(comb.a.Y, comb.b.Y); j++)
+                    {
+                        isInPolygon = IsPointInPolygon(polygon, (i, j));
+
+                        if (!isInPolygon) break;
+                    }
+                    if (!isInPolygon) break;
+                }
+
+                if (isInPolygon) p2 = Math.Max(p2, f);
             }
 
-            double result = (Math.Abs(largestValidPoints.Item1.X - largestValidPoints.Item2.X) + 1) * (Math.Abs(largestValidPoints.Item1.Y - largestValidPoints.Item2.Y) + 1);
-
-            Console.WriteLine($"The largest area of any rectangle which contains only red and green tiles is { result } tiles big!");
+            Console.WriteLine("Lösung: " + p2);
         }
-
-        private static bool IsPointInPolygon(List<(double X, double Y)> polygon, (double X, double Y) pointToCheck)
+        private static bool IsPointInPolygon(List<(long X, long Y)> polygon, (long X, long Y) pointToCheck)
         {
             bool insidePolygon = false;
             //check if the pointToCheck is on the border of the polygon
@@ -79,12 +90,16 @@ namespace AdventToCode
 
                 //check if the collinear pointToCheck is between the other points
                 //vectorfactor k = (Cx - Ax) / (Bx - Ax) -> if 0 <= k <= 1, then the pointToCheck is between point and nextPoint -> <= because if the pointToCheck is equal to point or nextPoint, k will be 0 or 1
-                double dot = (pointToCheck.X - point.X) / (nextPoint.X - point.X);
+                double dot = 0; // (pointToCheck.X - point.X) / (nextPoint.X - point.X);
 
                 //if they are kolinear on the Y axis then dot will be NaN, so check with Y axis
-                if (double.IsNaN(dot))
+                if (nextPoint.X - point.X is 0)
                 {
                     dot = (pointToCheck.Y - point.Y) / (nextPoint.Y - point.Y);
+                }
+                else
+                {
+                    dot = (pointToCheck.X - point.X) / (nextPoint.X - point.X);
                 }
 
                 insidePolygon = dot is >= 0 and <= 1;
@@ -111,11 +126,148 @@ namespace AdventToCode
                 //
                 //((Bx - Ax) * (Cy - Ay) / (By - Ay)) + Ax = Xs -> if Xs > Cx then the line intersects
 
-                double Xs = ((nextPoint.X - point.X) * (pointToCheck.Y - point.Y) / (nextPoint.Y - point.Y)) + point.X;
-                if (Xs > pointToCheck.X) intersect++;
+                try
+                {
+                    double Xs = ((nextPoint.X - point.X) * (pointToCheck.Y - point.Y) / (nextPoint.Y - point.Y)) + point.X;
+                    if (Xs > pointToCheck.X) intersect++;
+                }catch (DivideByZeroException e)
+                {
+
+                }
             }
             insidePolygon = intersect % 2 != 0;
             return insidePolygon;
         }
+        static long Flaeche(long x1, long y1, long x2, long y2)
+        {
+            return (Math.Abs(x1 - x2) + 1) * (Math.Abs(y1 - y2) + 1);
+        }
     }
 }
+
+//    foreach (var ((x1, y1), (x2, y2)) in combinations)
+//    {
+//        long f = Flaeche(x1, y1, x2, y2);
+//        p1 = Math.Max(p1, f);
+
+//        //if (f < p2) continue;
+
+//        bool isInPolygon = false;
+
+//        for (long i = Math.Min(x1, x2); i <= Math.Max(x1, x2); i++)
+//        {
+//            for (long j = Math.Min(y1, y2); j <= Math.Max(y1, y2); j++)
+//            {
+//                isInPolygon = PointInPolygon(i, j, polygon);
+
+//                if (!isInPolygon) break;
+//            }
+//            if (!isInPolygon) break;
+//        }
+
+//        if (isInPolygon) p2 = Math.Max(p2, f);
+//    }
+
+//    stopwatch.Stop();
+
+//    Console.WriteLine($"Solution: ({p1}, {p2})");
+//    Console.WriteLine($"Solved in {stopwatch.Elapsed.TotalSeconds:F5} Sec.");
+
+//    long result = p2;
+
+//    Console.WriteLine($"The largest area of any rectangle which contains only red and green tiles is { result } tiles big!");
+//}
+//static long Flaeche(long x1, long y1, long x2, long y2)
+//{
+//    return (Math.Abs(x1 - x2) + 1) * (Math.Abs(y1 - y2) + 1);
+//}
+
+//static bool PointInPolygon(long x, long y, List<(long x, long y)> polygon)
+//{
+//    bool inside = false;
+//    int j = polygon.Count - 1;
+
+//    for (int i = 0; i < polygon.Count; i++)
+//    {
+//        if (IsPointOnSegment(polygon[j], polygon[i], x, y)) return true;
+
+//        if (polygon[i].y == y && polygon[i].x == x) return true; 
+//        if ((polygon[i].y > y) != (polygon[j].y > y) &&
+//            x < (polygon[j].x - polygon[i].x) * (y - polygon[i].y) /
+//                (polygon[j].y - polygon[i].y) + polygon[i].x)
+//        {
+//            inside = !inside;
+//        }
+//        j = i;
+//    }
+//    return inside;
+//}
+
+//static bool IsPointOnSegment((long x, long y) a, (long x, long y) b, long px, long py)
+//{
+//    // Kreuzprodukt ~ 0 => kollinear
+//    long cross = (py - a.y) * (b.x - a.x) - (px - a.x) * (b.y - a.y);
+
+//    if (px == 3 && py == 5)
+//    {
+
+//    }
+//    if (cross == 0)
+//    {
+//        double dot = (px - a.x) / (b.x - a.x);
+
+//        //if they are kolinear on the Y axis then dot will be NaN, so check with Y axis
+//        if (double.IsNaN(dot))
+//        {
+//            dot = (py - a.y) / (b.x - a.y);
+//        }
+//        if (dot is >= 0 and <= 1) return false;
+//    }
+
+//    // innerhalb der Bounding-Box (mit Toleranz)
+//    long minX = Math.Min(a.x, b.x), maxX = Math.Max(a.x, b.x);
+//    long minY = Math.Min(a.y, b.y), maxY = Math.Max(a.y, b.y);
+//    return px >= minX && px <= maxX && py >= minY && py <= maxY;
+//}
+
+//public static bool PointInPolygon2(long x, long y, List<(long x, long y)> polygon)
+//{
+//    if (polygon == null || polygon.Count < 3) return false;
+
+//    // 1) Prüfe, ob Punkt auf einer Kante liegt (inkl. Scheitelpunkte)
+//    for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i, i++)
+//    {
+//        if (IsPointOnSegment(polygon[j], polygon[i], x, y)) return true;
+//    }
+
+//    // 2) Ray-casting (Winkelzählung) für Punkt-in-Polygon
+//    bool inside = false;
+//    for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i, i++)
+//    {
+//        long yi = polygon[i].y, yj = polygon[j].y;
+//        // Prüfen ob Kante die horizontale Halbgerade schneidet
+//        if ((yi > y) != (yj > y))
+//        {
+//            // X-Koordinate der Schnittstelle berechnen
+//            long intersectX = polygon[i].x + (y - yi) * (polygon[j].x - polygon[i].x) / (yj - yi);
+//            if (x < intersectX)
+//                inside = !inside;
+//        }
+//    }
+//    return inside;
+//}
+//static bool RectangleInPolygon(long x1, long y1, long x2, long y2, List<(long x, long y)> polygon)
+//{
+//    // Prüfe alle 4 Ecken des Rechtecks
+//    long minX = Math.Min(x1, x2);
+//    long maxX = Math.Max(x1, x2);
+//    long minY = Math.Min(y1, y2);
+//    long maxY = Math.Max(y1, y2);
+
+//    return PointInPolygon(minX, minY, polygon) &&
+//           PointInPolygon(maxX, minY, polygon) &&
+//           PointInPolygon(maxX, maxY, polygon) &&
+//           PointInPolygon(minX, maxY, polygon);
+//}
+//    }
+//}
