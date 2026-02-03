@@ -9,7 +9,7 @@ namespace AdventToCode
 {
     class State
     {
-        public string Value { get; set; }  // Aktueller Zustand
+        public List<int> Value { get; set; }  // Aktueller Zustand
         public int Steps { get; set; }   // Anzahl Knopfdrücke
         public List<int> Path { get; set; }  // Welche Knöpfe gedrückt wurden
     }
@@ -25,46 +25,46 @@ namespace AdventToCode
                 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}
                 """;
             //to use the example string enable this line and comment the line below
-            //IEnumerable<string> array = example.Split("\r\n");
-            IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
+            IEnumerable<string> array = example.Split("\r\n");
+            //IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
             int machineCount = 0;
             int result = 0;
             foreach (string line in array)
             {
                 machineCount++;
                 var actions = line.Split(" ");
-                string lampsFinished = "";
                 List<List<int>> buttons = new List<List<int>>();
-                string joltage = "";
+                List<int> joltage = new List<int>();
                 foreach (string action in actions)
                 {
-                    if (action.StartsWith("["))
-                    {
-                        lampsFinished = action;
-                    }
-                    else if (action.StartsWith("("))
+                    if (action.StartsWith("("))
                     {
                         buttons.Add(action.Substring(1, action.Length - 2).Split(",").Select(int.Parse).ToList());
                     }
                     else if (action.StartsWith("{"))
                     {
-                        joltage = action.Substring(1, action.Length - 2);
+                        joltage = action.Substring(1, action.Length - 2).Split(",").Select(int.Parse).ToList();
                     }
                 }
 
                 Queue<State> queue = new Queue<State>();
-                HashSet<string> visited = new HashSet<string>();
+                HashSet<List<int>> visited = new HashSet<List<int>>();
 
-                var startValue = lampsFinished.Replace('#', '.');
-                queue.Enqueue(new State { Value = startValue, Steps = 0, Path = new List<int>() });
-                visited.Add(startValue);
+                List<int> startValue = joltage.Select(i => 0).ToList();
+                queue.Enqueue(new State { Value = startValue.ToList(), Steps = 0, Path = new List<int>() });
+                visited.Add(startValue.ToList());
 
                 int minSteps = 0;
                 while (queue.Count > 0)
                 {
                     var current = queue.Dequeue();
 
-                    if (current.Value == lampsFinished)
+                    if (current.Steps >= 5)
+                    {
+
+                    }
+
+                    if (current.Value == joltage)
                     {
                         minSteps = current.Steps;
                         break;
@@ -72,15 +72,22 @@ namespace AdventToCode
 
                     foreach (var btn in buttons)
                     {
-                        string newValue = ToggleLamps(current.Value, btn);
+                        List<int> newValue = ToggleJoltage(current.Value, btn).ToList();
 
-                        if (!visited.Contains(newValue))
+                        bool joltageToHigh = false;
+                        for(int i = 0; i < newValue.Count; i++)
                         {
-                            visited.Add(newValue);
+                            if (newValue[i] > joltage[i])
+                                joltageToHigh = true;
+                        }
+
+                        if (!joltageToHigh)
+                        {
+                            visited.Add(newValue.ToList());
                             var newPath = new List<int>(current.Path) { buttons.IndexOf(btn) };
                             queue.Enqueue(new State
                             {
-                                Value = newValue,
+                                Value = newValue.ToList(),
                                 Steps = current.Steps + 1,
                                 Path = newPath
                             });
@@ -110,6 +117,15 @@ namespace AdventToCode
                 }
             }
             return sb.ToString();
+        }
+
+        private static List<int> ToggleJoltage(List<int> joltage, List<int> button)
+        {
+            foreach (int pos in button)
+            {
+                joltage[pos] += 1;
+            }
+            return joltage;
         }
     }
 }
