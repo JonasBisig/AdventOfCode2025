@@ -7,13 +7,6 @@ using System.Threading.Tasks;
 
 namespace AdventToCode
 {
-    class State
-    {
-        public List<int> Value { get; set; }  // Aktueller Zustand
-        public int Steps { get; set; }   // Anzahl Knopfdrücke
-        public List<int> Path { get; set; }  // Welche Knöpfe gedrückt wurden
-    }
-
     class Program
     {
         static void Main(string[] args)
@@ -25,8 +18,9 @@ namespace AdventToCode
                 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}
                 """;
             //to use the example string enable this line and comment the line below
-            IEnumerable<string> array = example.Split("\r\n");
-            //IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
+            //IEnumerable<string> array = example.Split("\r\n");
+            IEnumerable<string> array = File.ReadLines(Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.FullName, "input.txt"));
+
             int machineCount = 0;
             int result = 0;
             foreach (string line in array)
@@ -34,7 +28,7 @@ namespace AdventToCode
                 machineCount++;
                 var actions = line.Split(" ");
                 List<List<int>> buttons = new List<List<int>>();
-                List<int> joltage = new List<int>();
+                List<int> joltage = null;
                 foreach (string action in actions)
                 {
                     if (action.StartsWith("("))
@@ -47,85 +41,84 @@ namespace AdventToCode
                     }
                 }
 
-                Queue<State> queue = new Queue<State>();
-                HashSet<List<int>> visited = new HashSet<List<int>>();
+                //int dimensions = joltage.Count;
+                List<int> current = joltage.Select(i=>0).ToList();
 
-                List<int> startValue = joltage.Select(i => 0).ToList();
-                queue.Enqueue(new State { Value = startValue.ToList(), Steps = 0, Path = new List<int>() });
-                visited.Add(startValue.ToList());
+                // Buttons nach "Wirkung" sortieren (starkes Pruning!)
+                buttons = buttons.OrderByDescending(b => b.Count).ToList();
 
-                int minSteps = 0;
-                while (queue.Count > 0)
-                {
-                    var current = queue.Dequeue();
+                int best = int.MaxValue;
 
-                    if (current.Steps >= 5)
-                    {
+                DFS(0, buttons, joltage, current, 0, ref best, machineCount);
 
-                    }
-
-                    if (current.Value == joltage)
-                    {
-                        minSteps = current.Steps;
-                        break;
-                    }
-
-                    foreach (var btn in buttons)
-                    {
-                        List<int> newValue = ToggleJoltage(current.Value, btn).ToList();
-
-                        bool joltageToHigh = false;
-                        for(int i = 0; i < newValue.Count; i++)
-                        {
-                            if (newValue[i] > joltage[i])
-                                joltageToHigh = true;
-                        }
-
-                        if (!joltageToHigh)
-                        {
-                            visited.Add(newValue.ToList());
-                            var newPath = new List<int>(current.Path) { buttons.IndexOf(btn) };
-                            queue.Enqueue(new State
-                            {
-                                Value = newValue.ToList(),
-                                Steps = current.Steps + 1,
-                                Path = newPath
-                            });
-                        }
-                    }
-                }
-
-                result += minSteps;
-                Console.WriteLine($"In the {machineCount}th machine the buttons must be pressed {minSteps} times.");
+                result += best;
+                Console.WriteLine($"In the {machineCount}th machine the buttons must be pressed {best} times.");
             }
 
             Console.WriteLine($"In total, the buttons must be pressed {result} times.");
         }
 
-        private static string ToggleLamps(string lamps, List<int> button)
+        private static List<int> ToggleJoltage(string joltage, List<int> button)
         {
-            StringBuilder sb = new StringBuilder(lamps);
+            List<int> newJoltage = joltage.Split(",").Select(int.Parse).ToList();
             foreach (int pos in button)
             {
-                if (sb[pos+1] == '.')
-                {
-                    sb[pos+1] = '#';
-                }
-                else
-                {
-                    sb[pos+1] = '.';
-                }
+                newJoltage[pos] += 1;
             }
-            return sb.ToString();
+            return newJoltage;
         }
 
-        private static List<int> ToggleJoltage(List<int> joltage, List<int> button)
+        static void DFS(int buttonIndex, List<List<int>> buttons, List<int> target, List<int> current, int steps, ref int best, int machineCount)
         {
+            if (steps >= best)
+                return;
+
+            if (IsTarget(current, target))
+            {
+                best = steps;
+                return;
+            }
+
+            if (buttonIndex >= buttons.Count)
+                return;
+
+            List<int> button = buttons[buttonIndex];
+
+            // Maximal mögliche Drücke dieses Buttons
+            int maxPresses = int.MaxValue;
             foreach (int pos in button)
             {
-                joltage[pos] += 1;
+                if (current[pos] >= target[pos])
+                    maxPresses = 0;
+                else
+                    maxPresses = Math.Min(
+                        maxPresses,
+                        target[pos] - current[pos]
+                    );
             }
-            return joltage;
+
+            // Wichtig: von groß nach klein → schneller gute Lösungen
+            for (int k = maxPresses; k >= 0; k--)
+            {
+                Apply(button, current, k);
+                DFS(buttonIndex + 1, buttons, target, current, steps + k, ref best, machineCount);
+                Apply(button, current, -k); // Undo
+            }
+        }
+
+
+        static void Apply(List<int> button, List<int> current, int times)
+        {
+            foreach (int pos in button)
+                current[pos] += times;
+        }
+
+        static bool IsTarget(List<int> current, List<int> target)
+        {
+            for (int i = 0; i < current.Count; i++)
+                if (current[i] != target[i])
+                    return false;
+            return true;
         }
     }
 }
